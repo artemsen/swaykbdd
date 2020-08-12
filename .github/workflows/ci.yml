@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: >
+          sudo apt install --no-install-recommends --yes
+          build-essential meson pkg-config libjson-c-dev
+    - name: meson
+      run: meson ./build
+    - name: ninja
+      run: ninja -C ./build
+    - name: check
+      run: ./build/swaykbdd --version

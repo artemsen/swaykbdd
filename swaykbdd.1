@@ -1,0 +1,30 @@
+.TH swaykbdd 1 "August 2020" "swaykbdd" "User Commands"
+.SH NAME
+swaykbdd \- per-window keyboard layout for Sway
+.SH SYNOPSIS
+swaykbdd [\fIOPTIONS\fR...]
+.SH DESCRIPTION
+The \fBswaykbdd\fR utility can be used to automatically change the keyboard
+layout on a per-window basis.
+.PP
+For automatic start add to the Sway config file the following command:
+`exec swaykbdd`
+.PP
+.
+.SH OPTIONS
+.PP
+.IP "\fB\-h\fR, \fB\-\-help\fR"
+Display help message.
+.IP "\fB\-v\fR, \fB\-\-version\fR"
+Display version information.
+.
+.SH ENVIRONMENT
+.PP
+.IP \fISWAYSOCK\fR
+Path to the socket file used for Sway IPC.
+.
+.SH NOTES
+For suggestions, comments, bug reports etc. visit https://github.com/artemsen/swaykbdd
+.SH AUTHOR
+Artem Senichev <artemsen@gmail.com>
+.
