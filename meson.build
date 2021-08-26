@@ -1,7 +1,7 @@
 # Rules for building with Meson
 
 project(
-  'swayimg',
+  'swaykbdd',
   'c',
   default_options: [
     'c_std=c99',
