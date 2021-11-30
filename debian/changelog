@@ -1,0 +1,5 @@
+swaykbdd (1.0-1) unstable; urgency=medium
+
+  * Files for building debian packages
+
+ -- Iskren Hadzhinedev <i.hadzhinedev@gmail.com>  Wed, 01 Dec 2021 00:23:59 +0200
