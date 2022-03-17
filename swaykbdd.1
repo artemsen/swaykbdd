@@ -1,6 +1,8 @@
-.TH swaykbdd 1 "August 2020" "swaykbdd" "User Commands"
+.\" XVI hexadecimal editor
+.\" Copyright (C) 2022 Artem Senichev <artemsen@gmail.com>
+.TH SWAYKBDD 1 2022-03-17 swaykbdd "Swaykbdd manual"
 .SH NAME
-swaykbdd \- per-window keyboard layout for Sway
+swaykbdd \- keyboard layout switcher for Sway
 .SH SYNOPSIS
 swaykbdd [\fIOPTIONS\fR...]
 .SH DESCRIPTION
@@ -8,23 +10,25 @@ The \fBswaykbdd\fR utility can be used to automatically change the keyboard
 layout on a per-window basis.
 .PP
 For automatic start add to the Sway config file the following command:
-`exec swaykbdd`
-.PP
-.
+`exec swaykbdd`.
 .SH OPTIONS
-.PP
 .IP "\fB\-h\fR, \fB\-\-help\fR"
 Display help message.
 .IP "\fB\-v\fR, \fB\-\-version\fR"
 Display version information.
-.
+.IP "\fB\-d\fR, \fB\-\-default\fR\fB=\fR\fIID\fR"
+Set the default keyboard layout for new windows. \fIID\fR is an index of layout,
+default is 0, special value -1 can be used to disable set the layout for new
+windows (currently active layout will be used instead).
+.IP "\fB\-t\fR, \fB\-\-timeout\fR\fB=\fR\fIMS\fR"
+Ignored time between layout change and focus lost events, in milliseconds. The
+default value is 50.
 .SH ENVIRONMENT
-.PP
 .IP \fISWAYSOCK\fR
 Path to the socket file used for Sway IPC.
-.
-.SH NOTES
-For suggestions, comments, bug reports etc. visit https://github.com/artemsen/swaykbdd
-.SH AUTHOR
-Artem Senichev <artemsen@gmail.com>
-.
+.\" link to homepage
+.SH BUGS
+For suggestions, comments, bug reports etc. visit the
+.UR https://github.com/artemsen/swaykbdd
+project homepage
+.UE .

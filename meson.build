@@ -12,7 +12,10 @@ project(
 )
 
 add_project_arguments(
-  '-DVERSION="' + meson.project_version() + '"',
+  [
+    '-DVERSION="' + meson.project_version() + '"',
+    '-D_POSIX_C_SOURCE=200809'
+  ],
   language: 'c',
 )
 
