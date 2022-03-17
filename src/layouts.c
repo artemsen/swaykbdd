@@ -5,25 +5,25 @@
 
 #include <stdlib.h>
 
-/** Layouts map. */
-struct layout {
+/** State descriptor: window and its layout. */
+struct state {
     int window;
     int layout;
 };
-
-static struct layout* layouts;
-static int layouts_sz;
+static struct state* states;
+static int states_sz;
 
 /**
- * Find layout info.
+ * Find state description for specified window.
  * @param[in] window window Id
- * @return pointer to layout instance or NULL if not found
+ * @return pointer to the state descriptor or NULL if not found
  */
-struct layout* find_layout(int window)
+static struct state* find_state(int window)
 {
-    for (int i = 0; i < layouts_sz; ++i) {
-        if (layouts[i].window == window) {
-            return &layouts[i];
+    for (int i = 0; i < states_sz; ++i) {
+        struct state* entry = &states[i];
+        if (entry->window == window) {
+            return entry;
         }
     }
     return NULL;
@@ -31,47 +31,50 @@ struct layout* find_layout(int window)
 
 int get_layout(int window)
 {
-    const struct layout* l = find_layout(window);
-    return l ? l->layout : -1;
+    const struct state* entry = find_state(window);
+    return entry ? entry->layout : -1;
 }
 
 void put_layout(int window, int layout)
 {
-    // search for existing description
-    struct layout* existing = find_layout(window);
-    if (existing) {
-        if (layout == -1) {
-            existing->window = -1;
-        } else {
-            existing->layout = layout;
-        }
+    // search for existing descriptor
+    struct state* entry = find_state(window);
+    if (entry) {
+        entry->layout = layout;
         return;
     }
-    if (layout == -1) {
-        return; // remove not existed window
-    }
 
-    // search for free description
-    for (int i = 0; i < layouts_sz; ++i) {
-        struct layout* l = &layouts[i];
-        if (l->window == -1) {
-            l->window = window;
-            l->layout = layout;
+    // search for free descriptor
+    for (int i = 0; i < states_sz; ++i) {
+        struct state* entry = &states[i];
+        if (entry->window == -1) {
+            entry->window = window;
+            entry->layout = layout;
             return;
         }
     }
 
     // realloc
-    const int old_sz = layouts_sz;
-    layouts_sz += 8;
-    layouts = realloc(layouts, layouts_sz * sizeof(struct layout));
-    for (int i = old_sz; i < layouts_sz; ++i) {
-        struct layout* l = &layouts[i];
+    const int old_sz = states_sz;
+    states_sz += 8;
+    states = realloc(states, states_sz * sizeof(struct state));
+    for (int i = old_sz; i < states_sz; ++i) {
+        struct state* entry = &states[i];
         if (i == old_sz) {
-            l->window = window;
-            l->layout = layout;
+            entry->window = window;
+            entry->layout = layout;
         } else {
-            l->window = -1;
+            entry->window = -1;
         }
+    }
+}
+
+void rm_layout(int window)
+{
+    struct state* entry = find_state(window);
+    if (entry) {
+        // mark descriptor as free cell
+        entry->window = -1;
+        entry->layout = -1;
     }
 }

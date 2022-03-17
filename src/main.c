@@ -15,20 +15,18 @@ static int current_layout;
 static int last_window = -1;
 
 /** Focus change handler. */
-static int on_focus_change(int id)
+static int on_focus_change(int window)
 {
-    if (last_window == -1) {
-        // first focus
-        last_window = id;
-        return -1;
+    int layout;
+
+    // save current layout for previously focused window
+    if (last_window != -1) {
+        put_layout(last_window, current_layout);
     }
 
-    // save current layout for previous window
-    put_layout(last_window, current_layout);
-
-    // get layout for current window
-    int layout = get_layout(id);
-
+    // get layout for currently focused window
+    last_window = window;
+    layout = get_layout(last_window);
     if (layout < 0) {
         layout = 0; // set default
     }
@@ -36,21 +34,20 @@ static int on_focus_change(int id)
         layout = -1; // already set
     }
 
-    last_window = id;
-
     return layout;
 }
 
 /** Window close handler. */
-static void on_window_close(int id)
+static void on_window_close(int window)
 {
-    put_layout(id, -1);
+    rm_layout(window);
+    last_window = -1; // prevents saving layout for the closed window
 }
 
 /** Keyboard layout change handler. */
-static void on_layout_change(int index)
+static void on_layout_change(int layout)
 {
-    current_layout = index;
+    current_layout = layout;
 }
 
 /**

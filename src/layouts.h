@@ -13,6 +13,12 @@ int get_layout(int window);
 /**
  * Put layout information into storage.
  * @param[in] window window Id
- * @param[in] layout keyboard layout index, -1 to remove
+ * @param[in] layout keyboard layout index
  */
 void put_layout(int window, int layout);
+
+/**
+ * Remove layout information from storage.
+ * @param[in] window window Id
+ */
+void rm_layout(int window);
