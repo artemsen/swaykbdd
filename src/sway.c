@@ -184,13 +184,13 @@ static int ipc_subscribe(int sock)
     if (rc == 0) {
         struct json_object* response = ipc_read(sock);
         if (!response) {
-            rc = EBADRQC;
+            rc = EIO;
         } else {
             struct json_object* val;
             if (!json_object_object_get_ex(response, "success", &val) ||
                 !json_object_get_boolean(val)) {
                 fprintf(stderr, "Unable to subscribe\n");
-                rc = EBADRQC;
+                rc = EIO;
             }
             json_object_put(response);
         }
@@ -269,7 +269,7 @@ int sway_monitor(on_focus fn_focus, on_close fn_close, on_layout fn_layout)
     while (rc == 0) {
         struct json_object* msg = ipc_read(sock);
         if (!msg) {
-            rc = EBADRQC;
+            rc = EIO;
         } else {
             struct json_object* event_node;
             if (json_object_object_get_ex(msg, "change", &event_node)) {
