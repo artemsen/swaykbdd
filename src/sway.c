@@ -212,24 +212,31 @@ static int ipc_change_layout(int sock, int layout)
     return ipc_write(sock, IPC_COMMAND, cmd);
 }
 
-/**
- * Get container Id from event message.
- * @param[in] msg event message
- * @return container Id or -1 if not found
- */
-static int container_id(struct json_object* msg)
+static void get_window_key(struct json_object* msg, char *w_str, size_t len)
 {
+    int w_id = -1;
+    const char *name = NULL;
     struct json_object* cnt_node;
     if (json_object_object_get_ex(msg, "container", &cnt_node)) {
         struct json_object* id_node;
         if (json_object_object_get_ex(cnt_node, "id", &id_node)) {
             const int id = json_object_get_int(id_node);
             if (id != 0 || errno != EINVAL) {
-                return id;
+                w_id = id;
+            }
+        }
+        struct json_object* appid_node;
+        if (json_object_object_get_ex(cnt_node, "app_id", &appid_node)) {
+            const char *app_id = json_object_get_string(appid_node);
+            if (app_id != NULL && strcmp(app_id, "firefox") == 0) {
+                struct json_object* name_node;
+                if (json_object_object_get_ex(cnt_node, "name", &name_node)) {
+                    name = json_object_get_string(name_node);
+                }
             }
         }
     }
-    return -1;
+    snprintf(w_str, len, "%d_%s", w_id, (name == NULL) ? "" : name);
 }
 
 /**
@@ -277,14 +284,14 @@ int sway_monitor(on_focus fn_focus, on_close fn_close, on_layout fn_layout)
                 const char* event_name = json_object_get_string(event_node);
                 if (strcmp(event_name, "focus") == 0) {
                     char w_str[CACHE_MAX_KEY_SIZE];
-                    snprintf(w_str, sizeof(w_str), "%d", container_id(msg));
+                    get_window_key(msg, w_str, sizeof(w_str));
                     const int layout = fn_focus(w_str);
                     if (layout >= 0) {
                         ipc_change_layout(sock, layout);
                     }
                 } else if (strcmp(event_name, "close") == 0) {
                     char w_str[CACHE_MAX_KEY_SIZE];
-                    snprintf(w_str, sizeof(w_str), "%d", container_id(msg));
+                    get_window_key(msg, w_str, sizeof(w_str));
                     fn_close(w_str);
                 } else if (strcmp(event_name, "xkb_layout") == 0) {
                     fn_layout(layout_index(msg));
