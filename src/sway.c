@@ -2,6 +2,7 @@
 // Copyright (C) 2020 Artem Senichev <artemsen@gmail.com>
 
 #include "sway.h"
+#include "layouts.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -212,11 +213,11 @@ static int ipc_change_layout(int sock, int layout)
 }
 
 /**
- * Get container Id from event message.
+ * Get window Id from event message.
  * @param[in] msg event message
- * @return container Id or -1 if not found
+ * @return window Id
  */
-static int container_id(struct json_object* msg)
+static unsigned long container_id(struct json_object* msg)
 {
     struct json_object* cnt_node;
     if (json_object_object_get_ex(msg, "container", &cnt_node)) {
@@ -228,7 +229,7 @@ static int container_id(struct json_object* msg)
             }
         }
     }
-    return -1;
+    return INVALID_WINDOW;
 }
 
 /**
@@ -248,7 +249,7 @@ static int layout_index(struct json_object* msg)
             }
         }
     }
-    return -1;
+    return INVALID_LAYOUT;
 }
 
 int sway_monitor(on_focus fn_focus, on_close fn_close, on_layout fn_layout)
@@ -275,8 +276,8 @@ int sway_monitor(on_focus fn_focus, on_close fn_close, on_layout fn_layout)
             if (json_object_object_get_ex(msg, "change", &event_node)) {
                 const char* event_name = json_object_get_string(event_node);
                 if (strcmp(event_name, "focus") == 0) {
-                    const int cid = container_id(msg);
-                    const int layout = fn_focus(cid);
+                    const unsigned long wid = container_id(msg);
+                    const int layout = fn_focus(wid);
                     if (layout >= 0) {
                         ipc_change_layout(sock, layout);
                     }

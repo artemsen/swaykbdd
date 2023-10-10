@@ -3,22 +3,25 @@
 
 #pragma once
 
+#define INVALID_WINDOW  0
+#define INVALID_LAYOUT -1
+
 /**
  * Get layout information for specified window.
  * @param[in] window window Id
- * @return layout index, -1 if not found
+ * @return layout index, INVALID_LAYOUT if not found
  */
-int get_layout(int window);
+int get_layout(unsigned long window);
 
 /**
  * Put layout information into storage.
  * @param[in] window window Id
  * @param[in] layout keyboard layout index
  */
-void put_layout(int window, int layout);
+void put_layout(unsigned long window, int layout);
 
 /**
  * Remove layout information from storage.
  * @param[in] window window Id
  */
-void rm_layout(int window);
+void rm_layout(unsigned long window);
