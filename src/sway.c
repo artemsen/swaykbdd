@@ -2,6 +2,7 @@
 // Copyright (C) 2020 Artem Senichev <artemsen@gmail.com>
 
 #include "sway.h"
+#include "cache.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -275,13 +276,16 @@ int sway_monitor(on_focus fn_focus, on_close fn_close, on_layout fn_layout)
             if (json_object_object_get_ex(msg, "change", &event_node)) {
                 const char* event_name = json_object_get_string(event_node);
                 if (strcmp(event_name, "focus") == 0) {
-                    const int cid = container_id(msg);
-                    const int layout = fn_focus(cid);
+                    char w_str[CACHE_MAX_KEY_SIZE];
+                    snprintf(w_str, sizeof(w_str), "%d", container_id(msg));
+                    const int layout = fn_focus(w_str);
                     if (layout >= 0) {
                         ipc_change_layout(sock, layout);
                     }
                 } else if (strcmp(event_name, "close") == 0) {
-                    fn_close(container_id(msg));
+                    char w_str[CACHE_MAX_KEY_SIZE];
+                    snprintf(w_str, sizeof(w_str), "%d", container_id(msg));
+                    fn_close(w_str);
                 } else if (strcmp(event_name, "xkb_layout") == 0) {
                     fn_layout(layout_index(msg));
                 }

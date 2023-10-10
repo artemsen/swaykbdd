@@ -3,6 +3,7 @@
 project(
   'swaykbdd',
   'c',
+  'cpp',
   default_options: [
     'c_std=c99',
     'warning_level=3',
@@ -24,7 +25,7 @@ install_man('swaykbdd.1')
 executable(
   'swaykbdd',
   [
-    'src/layouts.c',
+    'src/cache.cpp',
     'src/main.c',
     'src/sway.c',
   ],

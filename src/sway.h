@@ -8,13 +8,13 @@
  * @param[in] window identifier of currently focused window (container)
  * @return keyboard layout to set, -1 to leave current
  */
-typedef int (*on_focus)(int window);
+typedef int (*on_focus)(const char* window_key);
 
 /**
  * Callback function: Window close handler.
  * @param[in] window identifier of closed window (container)
  */
-typedef void (*on_close)(int window);
+typedef void (*on_close)(const char* window_key);
 
 /**
  * Callback function: Keyboard layout change handler.

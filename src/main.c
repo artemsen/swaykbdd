@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2020 Artem Senichev <artemsen@gmail.com>
 
-#include "layouts.h"
+#include "cache.h"
 #include "sway.h"
 
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
 // Default layout for new windows
 #define DEFAULT_LAYOUT  0
@@ -19,26 +20,35 @@
 
 /** Static context. */
 struct context {
-    int last_window;    ///< Identifier of the last focused window
+    char * last_window; ///< Identifier of the last focused window
     int default_layout; ///< Default layout for new windows
     int current_layout; ///< Current layout index
     int switch_timeout; ///< Ignored time between layout change and focus lost
     struct timespec switch_timestamp; ///< Timestamp of the last layout change
 };
 static struct context ctx = {
-    .last_window = -1,
+    .last_window = NULL,
     .default_layout = DEFAULT_LAYOUT,
     .current_layout = -1,
     .switch_timeout = DEFAULT_TIMEOUT,
 };
 
+static char *internal_strdup(const char *s) {
+    size_t size = strlen(s) + 1;
+    char *p = malloc(size);
+    if (p) {
+        memcpy(p, s, size);
+    }
+    return p;
+}
+
 /** Focus change handler. */
-static int on_focus_change(int window)
+static int on_focus_change(const char* window_key)
 {
     int layout;
 
     // save current layout for previously focused window
-    if (ctx.last_window != -1 && ctx.current_layout != -1) {
+    if (ctx.last_window != NULL && ctx.current_layout != -1) {
         if (ctx.switch_timeout == 0) {
             layout = ctx.current_layout;
         } else {
@@ -54,12 +64,12 @@ static int on_focus_change(int window)
             }
         }
         if (layout != -1) {
-            put_layout(ctx.last_window, layout);
+            cache_put(ctx.last_window, layout);
         }
     }
 
     // define layout for currently focused window
-    layout = get_layout(window);
+    layout = cache_get(window_key);
     if (layout == -1 && ctx.default_layout != -1) {
         layout = ctx.default_layout; // set default
     }
@@ -67,18 +77,21 @@ static int on_focus_change(int window)
         layout = -1; // already set
     }
 
-    ctx.last_window = window;
+    if (ctx.last_window != NULL)
+        free(ctx.last_window);
+    ctx.last_window = internal_strdup(window_key);
 
     return layout;
 }
 
 /** Window close handler. */
-static void on_window_close(int window)
+static void on_window_close(const char* window_key)
 {
-    rm_layout(window);
-    if (window == ctx.last_window) {
+    if (strcmp(window_key, ctx.last_window) == 0) {
         // reset last window id to prevent saving layout for the closed window
-        ctx.last_window = -1;
+        if (ctx.last_window != NULL)
+            free(ctx.last_window);
+        ctx.last_window = NULL;
     }
 }
 
