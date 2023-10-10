@@ -7,7 +7,7 @@
 
 /** State descriptor: window and its layout. */
 struct state {
-    int window;
+    unsigned long window;
     int layout;
 };
 static struct state* states;
@@ -18,7 +18,7 @@ static int states_sz;
  * @param[in] window window Id
  * @return pointer to the state descriptor or NULL if not found
  */
-static struct state* find_state(int window)
+static struct state* find_state(unsigned long window)
 {
     for (int i = 0; i < states_sz; ++i) {
         struct state* entry = &states[i];
@@ -29,13 +29,13 @@ static struct state* find_state(int window)
     return NULL;
 }
 
-int get_layout(int window)
+int get_layout(unsigned long window)
 {
     const struct state* entry = find_state(window);
-    return entry ? entry->layout : -1;
+    return entry ? entry->layout : INVALID_LAYOUT;
 }
 
-void put_layout(int window, int layout)
+void put_layout(unsigned long window, int layout)
 {
     // search for existing descriptor
     struct state* entry = find_state(window);
@@ -47,7 +47,7 @@ void put_layout(int window, int layout)
     // search for free descriptor
     for (int i = 0; i < states_sz; ++i) {
         struct state* entry = &states[i];
-        if (entry->window == -1) {
+        if (entry->window == INVALID_WINDOW) {
             entry->window = window;
             entry->layout = layout;
             return;
@@ -64,17 +64,17 @@ void put_layout(int window, int layout)
             entry->window = window;
             entry->layout = layout;
         } else {
-            entry->window = -1;
+            entry->window = INVALID_WINDOW;
         }
     }
 }
 
-void rm_layout(int window)
+void rm_layout(unsigned long window)
 {
     struct state* entry = find_state(window);
     if (entry) {
         // mark descriptor as free cell
-        entry->window = -1;
-        entry->layout = -1;
+        entry->window = INVALID_WINDOW;
+        entry->layout = INVALID_LAYOUT;
     }
 }

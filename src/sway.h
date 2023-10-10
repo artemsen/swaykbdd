@@ -8,19 +8,19 @@
  * @param[in] window identifier of currently focused window (container)
  * @return keyboard layout to set, -1 to leave current
  */
-typedef int (*on_focus)(int window);
+typedef int (*on_focus)(unsigned long window);
 
 /**
  * Callback function: Window close handler.
  * @param[in] window identifier of closed window (container)
  */
-typedef void (*on_close)(int window);
+typedef void (*on_close)(unsigned long window);
 
 /**
  * Callback function: Keyboard layout change handler.
  * @param[in] layout current keyboard layout index
  */
-typedef void (*on_layout)(int layout);
+typedef void (*on_layout)(unsigned long layout);
 
 /**
  * Connect to Sway IPC and start event monitoring.

@@ -19,26 +19,27 @@
 
 /** Static context. */
 struct context {
-    int last_window;    ///< Identifier of the last focused window
-    int default_layout; ///< Default layout for new windows
-    int current_layout; ///< Current layout index
-    int switch_timeout; ///< Ignored time between layout change and focus lost
+    unsigned long last_window;        ///< Identifier of the last focused window
+    int default_layout;               ///< Default layout for new windows
+    int current_layout;               ///< Current layout index
+    int switch_timeout;               ///< Ignored time between layout change and focus lost
     struct timespec switch_timestamp; ///< Timestamp of the last layout change
 };
 static struct context ctx = {
-    .last_window = -1,
+    .last_window = INVALID_WINDOW,
     .default_layout = DEFAULT_LAYOUT,
-    .current_layout = -1,
+    .current_layout = INVALID_LAYOUT,
     .switch_timeout = DEFAULT_TIMEOUT,
 };
 
 /** Focus change handler. */
-static int on_focus_change(int window)
+static int on_focus_change(unsigned long window)
 {
     int layout;
 
     // save current layout for previously focused window
-    if (ctx.last_window != -1 && ctx.current_layout != -1) {
+    if (ctx.last_window != INVALID_WINDOW &&
+        ctx.current_layout != INVALID_LAYOUT) {
         if (ctx.switch_timeout == 0) {
             layout = ctx.current_layout;
         } else {
@@ -50,21 +51,21 @@ static int on_focus_change(int window)
             if (elapsed > (unsigned long long)ctx.switch_timeout) {
                 layout = ctx.current_layout;
             } else {
-                layout = -1;
+                layout = INVALID_LAYOUT;
             }
         }
-        if (layout != -1) {
+        if (layout != INVALID_LAYOUT) {
             put_layout(ctx.last_window, layout);
         }
     }
 
     // define layout for currently focused window
     layout = get_layout(window);
-    if (layout == -1 && ctx.default_layout != -1) {
+    if (layout == INVALID_LAYOUT && ctx.default_layout != INVALID_LAYOUT) {
         layout = ctx.default_layout; // set default
     }
     if (layout == ctx.current_layout) {
-        layout = -1; // already set
+        layout = INVALID_LAYOUT; // already set
     }
 
     ctx.last_window = window;
@@ -73,17 +74,17 @@ static int on_focus_change(int window)
 }
 
 /** Window close handler. */
-static void on_window_close(int window)
+static void on_window_close(unsigned long window)
 {
     rm_layout(window);
     if (window == ctx.last_window) {
         // reset last window id to prevent saving layout for the closed window
-        ctx.last_window = -1;
+        ctx.last_window = INVALID_WINDOW;
     }
 }
 
 /** Keyboard layout change handler. */
-static void on_layout_change(int layout)
+static void on_layout_change(unsigned long layout)
 {
     ctx.current_layout = layout;
     clock_gettime(CLOCK_MONOTONIC, &ctx.switch_timestamp);
