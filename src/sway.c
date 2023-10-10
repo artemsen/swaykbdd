@@ -282,7 +282,7 @@ int sway_monitor(on_focus fn_focus, on_close fn_close, on_layout fn_layout)
             struct json_object* event_node;
             if (json_object_object_get_ex(msg, "change", &event_node)) {
                 const char* event_name = json_object_get_string(event_node);
-                if (strcmp(event_name, "focus") == 0) {
+                if (strcmp(event_name, "focus") == 0 || strcmp(event_name, "title") == 0) {
                     char w_str[CACHE_MAX_KEY_SIZE];
                     get_window_key(msg, w_str, sizeof(w_str));
                     const int layout = fn_focus(w_str);
