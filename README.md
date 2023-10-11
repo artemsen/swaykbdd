@@ -1,4 +1,4 @@
-# Swaykbdd: per-window keyboard layout for Sway
+# Swaykbdd: Automatic keyboard layout switching in Sway
 
 ![CI](https://github.com/artemsen/swaykbdd/workflows/CI/badge.svg)
 
@@ -7,10 +7,13 @@ on a per-window basis.
 
 ## Usage
 
-For automatic start add to the Sway config file the following command:
+Just run `swaykbdd`. For automatic start, add to the Sway config file the
+following command:
 `exec swaykbdd`
 
 ## Build and install
+
+[![Packaging status](https://repology.org/badge/tiny-repos/swaykbdd.svg)](https://repology.org/project/swaykbdd/versions)
 
 ```
 meson build
