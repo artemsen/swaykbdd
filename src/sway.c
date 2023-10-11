@@ -213,23 +213,43 @@ static int ipc_change_layout(int sock, int layout)
 }
 
 /**
- * Get window Id from event message.
+ * Generate window Id from event message.
  * @param[in] msg event message
  * @return window Id
  */
-static unsigned long container_id(struct json_object* msg)
+static unsigned long window_id(struct json_object* msg)
 {
+    unsigned long wnd_id = INVALID_WINDOW;
+    const char* app_id = NULL;
+    const char* name = NULL;
     struct json_object* cnt_node;
+
+    // parse message
     if (json_object_object_get_ex(msg, "container", &cnt_node)) {
-        struct json_object* id_node;
-        if (json_object_object_get_ex(cnt_node, "id", &id_node)) {
-            const int id = json_object_get_int(id_node);
-            if (id != 0 || errno != EINVAL) {
-                return id;
-            }
+        struct json_object* sub_node;
+        if (json_object_object_get_ex(cnt_node, "id", &sub_node)) {
+            wnd_id = json_object_get_int(sub_node);
+        }
+        if (json_object_object_get_ex(cnt_node, "app_id", &sub_node)) {
+            app_id = json_object_get_string(sub_node);
+        }
+        if (json_object_object_get_ex(cnt_node, "name", &sub_node)) {
+            name = json_object_get_string(sub_node);
         }
     }
-    return INVALID_WINDOW;
+
+    // check if the current container belongs to the web browser, we will
+    // use window title (which is a tab name) to generate unique id
+    if (app_id && name &&
+        (strcmp(app_id, "firefox") == 0 || strcmp(app_id, "chromium") == 0)) {
+        // djb2 hash
+        wnd_id = 5381;
+        while (*name) {
+            wnd_id = ((wnd_id << 5) + wnd_id) + *name++;
+        }
+    }
+
+    return wnd_id;
 }
 
 /**
@@ -242,7 +262,8 @@ static int layout_index(struct json_object* msg)
     struct json_object* input_node;
     if (json_object_object_get_ex(msg, "input", &input_node)) {
         struct json_object* index_node;
-        if (json_object_object_get_ex(input_node, "xkb_active_layout_index", &index_node)) {
+        if (json_object_object_get_ex(input_node, "xkb_active_layout_index",
+                                      &index_node)) {
             const int idx = json_object_get_int(index_node);
             if (idx != 0 || errno != EINVAL) {
                 return idx;
@@ -275,14 +296,15 @@ int sway_monitor(on_focus fn_focus, on_close fn_close, on_layout fn_layout)
             struct json_object* event_node;
             if (json_object_object_get_ex(msg, "change", &event_node)) {
                 const char* event_name = json_object_get_string(event_node);
-                if (strcmp(event_name, "focus") == 0) {
-                    const unsigned long wid = container_id(msg);
+                if (strcmp(event_name, "focus") == 0 ||
+                    strcmp(event_name, "title") == 0) {
+                    const unsigned long wid = window_id(msg);
                     const int layout = fn_focus(wid);
                     if (layout >= 0) {
                         ipc_change_layout(sock, layout);
                     }
                 } else if (strcmp(event_name, "close") == 0) {
-                    fn_close(container_id(msg));
+                    fn_close(window_id(msg));
                 } else if (strcmp(event_name, "xkb_layout") == 0) {
                     fn_layout(layout_index(msg));
                 }
