@@ -7,6 +7,7 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 // Default layout for new windows
@@ -32,10 +33,30 @@ static struct context ctx = {
     .switch_timeout = DEFAULT_TIMEOUT,
 };
 
+/* Generate unique window id. */
+static unsigned long window_id(int wnd_id, const char* app_id, const char* title)
+{
+    unsigned long id = wnd_id;
+
+    // check if the current container belongs to the web browser, we will
+    // use window title (which is a tab name) to generate unique id
+    if (app_id && title &&
+        (strcmp(app_id, "firefox") == 0 || strcmp(app_id, "chromium") == 0)) {
+        // djb2 hash
+        id = 5381;
+        while (*title) {
+            id = ((id << 5) + id) + *title++;
+        }
+    }
+
+    return id;
+}
+
 /** Focus change handler. */
-static int on_focus_change(unsigned long window)
+static int on_focus_change(int wnd_id, const char* app_id, const char* title)
 {
     int layout;
+    const unsigned long window = window_id(wnd_id, app_id, title);
 
     // save current layout for previously focused window
     if (ctx.last_window != INVALID_WINDOW &&
@@ -74,9 +95,12 @@ static int on_focus_change(unsigned long window)
 }
 
 /** Window close handler. */
-static void on_window_close(unsigned long window)
+static void on_window_close(int wnd_id, const char* app_id, const char* title)
 {
+    const unsigned long window = window_id(wnd_id, app_id, title);
+
     rm_layout(window);
+
     if (window == ctx.last_window) {
         // reset last window id to prevent saving layout for the closed window
         ctx.last_window = INVALID_WINDOW;
@@ -84,7 +108,7 @@ static void on_window_close(unsigned long window)
 }
 
 /** Keyboard layout change handler. */
-static void on_layout_change(unsigned long layout)
+static void on_layout_change(int layout)
 {
     ctx.current_layout = layout;
     clock_gettime(CLOCK_MONOTONIC, &ctx.switch_timestamp);
@@ -132,10 +156,10 @@ int main(int argc, char* argv[])
             case 'h':
                 printf("Keyboard layout switcher for Sway.\n");
                 printf("Usage: %s [OPTION]\n", argv[0]);
-                printf("  -d, --default ID  Default layout for new windows [%i]\n",
-                       DEFAULT_LAYOUT);
-                printf("  -t, --timeout MS  Delay between switching and saving layout [%i ms]\n",
-                       DEFAULT_TIMEOUT);
+                printf("  -d, --default ID  Default layout for new windows "
+                       "[%i]\n", DEFAULT_LAYOUT);
+                printf("  -t, --timeout MS  Delay between switching and "
+                       "saving layout [%i ms]\n", DEFAULT_TIMEOUT);
                 printf("  -v, --version     Print version info and exit\n");
                 printf("  -h, --help        Print this help and exit\n");
                 return EXIT_SUCCESS;

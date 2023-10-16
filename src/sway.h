@@ -5,22 +5,26 @@
 
 /**
  * Callback function: Window focus change handler.
- * @param[in] window identifier of currently focused window (container)
- * @return keyboard layout to set, -1 to leave current
+ * @param[in] wnd_id identifier of currently focused window (container)
+ * @param[in] app_id application id
+ * @param[in] title title of the window
+ * @return keyboard layout to set, -1 to leave the current one
  */
-typedef int (*on_focus)(unsigned long window);
+typedef int (*on_focus)(int wnd_id, const char* app_id, const char* title);
 
 /**
  * Callback function: Window close handler.
- * @param[in] window identifier of closed window (container)
+ * @param[in] wnd_id identifier of currently focused window (container)
+ * @param[in] app_id application id
+ * @param[in] title title of the window
  */
-typedef void (*on_close)(unsigned long window);
+typedef void (*on_close)(int wnd_id, const char* app_id, const char* title);
 
 /**
  * Callback function: Keyboard layout change handler.
  * @param[in] layout current keyboard layout index
  */
-typedef void (*on_layout)(unsigned long layout);
+typedef void (*on_layout)(int layout);
 
 /**
  * Connect to Sway IPC and start event monitoring.

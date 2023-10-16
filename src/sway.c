@@ -2,7 +2,6 @@
 // Copyright (C) 2020 Artem Senichev <artemsen@gmail.com>
 
 #include "sway.h"
-#include "layouts.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -213,43 +212,30 @@ static int ipc_change_layout(int sock, int layout)
 }
 
 /**
- * Generate window Id from event message.
+ * Get container info from event message.
  * @param[in] msg event message
- * @return window Id
+ * @param[out] wnd_id identifier of currently focused window (container)
+ * @param[out] app_id application id
+ * @param[out] title title of the window
  */
-static unsigned long window_id(struct json_object* msg)
+static void container_info(struct json_object* msg, int* wnd_id,
+                           const char** app_id, const char** title)
 {
-    unsigned long wnd_id = INVALID_WINDOW;
-    const char* app_id = NULL;
-    const char* name = NULL;
     struct json_object* cnt_node;
+    struct json_object* sub_node;
 
-    // parse message
-    if (json_object_object_get_ex(msg, "container", &cnt_node)) {
-        struct json_object* sub_node;
-        if (json_object_object_get_ex(cnt_node, "id", &sub_node)) {
-            wnd_id = json_object_get_int(sub_node);
-        }
-        if (json_object_object_get_ex(cnt_node, "app_id", &sub_node)) {
-            app_id = json_object_get_string(sub_node);
-        }
-        if (json_object_object_get_ex(cnt_node, "name", &sub_node)) {
-            name = json_object_get_string(sub_node);
-        }
+    if (!json_object_object_get_ex(msg, "container", &cnt_node)) {
+        return;
     }
-
-    // check if the current container belongs to the web browser, we will
-    // use window title (which is a tab name) to generate unique id
-    if (app_id && name &&
-        (strcmp(app_id, "firefox") == 0 || strcmp(app_id, "chromium") == 0)) {
-        // djb2 hash
-        wnd_id = 5381;
-        while (*name) {
-            wnd_id = ((wnd_id << 5) + wnd_id) + *name++;
-        }
+    if (json_object_object_get_ex(cnt_node, "id", &sub_node)) {
+        *wnd_id = json_object_get_int(sub_node);
     }
-
-    return wnd_id;
+    if (json_object_object_get_ex(cnt_node, "app_id", &sub_node)) {
+        *app_id = json_object_get_string(sub_node);
+    }
+    if (json_object_object_get_ex(cnt_node, "name", &sub_node)) {
+        *title = json_object_get_string(sub_node);
+    }
 }
 
 /**
@@ -270,7 +256,7 @@ static int layout_index(struct json_object* msg)
             }
         }
     }
-    return INVALID_LAYOUT;
+    return -1;
 }
 
 int sway_monitor(on_focus fn_focus, on_close fn_close, on_layout fn_layout)
@@ -295,18 +281,25 @@ int sway_monitor(on_focus fn_focus, on_close fn_close, on_layout fn_layout)
         } else {
             struct json_object* event_node;
             if (json_object_object_get_ex(msg, "change", &event_node)) {
+                int wnd_id = -1;
+                const char* app_id = "";
+                const char* title = "";
                 const char* event_name = json_object_get_string(event_node);
                 if (strcmp(event_name, "focus") == 0 ||
                     strcmp(event_name, "title") == 0) {
-                    const unsigned long wid = window_id(msg);
-                    const int layout = fn_focus(wid);
+                    container_info(msg, &wnd_id, &app_id, &title);
+                    const int layout = fn_focus(wnd_id, app_id, title);
                     if (layout >= 0) {
                         ipc_change_layout(sock, layout);
                     }
                 } else if (strcmp(event_name, "close") == 0) {
-                    fn_close(window_id(msg));
+                    container_info(msg, &wnd_id, &app_id, &title);
+                    fn_close(wnd_id, app_id, title);
                 } else if (strcmp(event_name, "xkb_layout") == 0) {
-                    fn_layout(layout_index(msg));
+                    const int layout = layout_index(msg);
+                    if (layout >= 0) {
+                        fn_layout(layout);
+                    }
                 }
             }
             json_object_put(msg);
