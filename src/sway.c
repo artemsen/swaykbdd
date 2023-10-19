@@ -259,7 +259,8 @@ static int layout_index(struct json_object* msg)
     return -1;
 }
 
-int sway_monitor(on_focus fn_focus, on_close fn_close, on_layout fn_layout)
+int sway_monitor(on_focus fn_focus, on_title fn_title,
+                 on_close fn_close, on_layout fn_layout)
 {
     int rc;
 
@@ -285,10 +286,15 @@ int sway_monitor(on_focus fn_focus, on_close fn_close, on_layout fn_layout)
                 const char* app_id = "";
                 const char* title = "";
                 const char* event_name = json_object_get_string(event_node);
-                if (strcmp(event_name, "focus") == 0 ||
-                    strcmp(event_name, "title") == 0) {
+                if (strcmp(event_name, "focus") == 0) {
                     container_info(msg, &wnd_id, &app_id, &title);
                     const int layout = fn_focus(wnd_id, app_id, title);
+                    if (layout >= 0) {
+                        ipc_change_layout(sock, layout);
+                    }
+                } else if (strcmp(event_name, "title") == 0) {
+                    container_info(msg, &wnd_id, &app_id, &title);
+                    const int layout = fn_title(wnd_id, app_id, title);
                     if (layout >= 0) {
                         ipc_change_layout(sock, layout);
                     }

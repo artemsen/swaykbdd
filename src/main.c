@@ -20,52 +20,62 @@
 // Convert timespec to milliseconds
 #define TIMESPEC_MS(ts) (ts.tv_sec * 1000 + ts.tv_nsec / 1000000)
 
+// Debug trace
+#if 0
+#define TRACE(fmt, ...) printf("%s: " fmt "\n", __func__, ##__VA_ARGS__)
+#else
+#define TRACE(fmt, ...)
+#endif
+
 /** Static context. */
 struct context {
-    unsigned long last_window;        ///< Identifier of the last focused window
+    unsigned long last_key;           ///< Key of the last focused window
+    int last_wnd;                     ///< Identifier of the last focused window
     int default_layout;               ///< Default layout for new windows
     int current_layout;               ///< Current layout index
     int switch_timeout;               ///< Ignored time between layout change and focus lost
     struct timespec switch_timestamp; ///< Timestamp of the last layout change
-    char** tabapps;
-    size_t tabapps_num;
+    char** tabapps;                   ///< List of tab-enbled applications
+    size_t tabapps_num;               ///< Size of tabbaps list
 };
 static struct context ctx = {
-    .last_window = INVALID_WINDOW,
+    .last_key = INVALID_KEY,
+    .last_wnd = -1,
     .default_layout = DEFAULT_LAYOUT,
     .current_layout = INVALID_LAYOUT,
     .switch_timeout = DEFAULT_TIMEOUT,
 };
 
-/* Generate unique window id. */
-static unsigned long window_id(int wnd_id, const char* app_id, const char* title)
+/* Generate unique window key. */
+static unsigned long window_key(int wnd_id, const char* app_id, const char* title)
 {
-    unsigned long id = wnd_id;
+    unsigned long key = wnd_id;
 
     // check if the current container belongs to the web browser, we will
     // use window title (which is a tab name) to generate unique id
     for (size_t i = 0; i < ctx.tabapps_num; ++i) {
         if (strcmp(app_id, ctx.tabapps[i]) == 0) {
             // djb2 hash
-            id = 5381;
+            key = 5381;
             while (*title) {
-                id = ((id << 5) + id) + *title++;
+                key = ((key << 5) + key) + *title++;
             }
+            key += wnd_id;
             break;
         }
     }
 
-    return id;
+    return key;
 }
 
 /** Focus change handler. */
 static int on_focus_change(int wnd_id, const char* app_id, const char* title)
 {
     int layout;
-    const unsigned long window = window_id(wnd_id, app_id, title);
+    const unsigned long key = window_key(wnd_id, app_id, title);
 
     // save current layout for previously focused window
-    if (ctx.last_window != INVALID_WINDOW &&
+    if (ctx.last_key != INVALID_KEY &&
         ctx.current_layout != INVALID_LAYOUT) {
         if (ctx.switch_timeout == 0) {
             layout = ctx.current_layout;
@@ -82,12 +92,15 @@ static int on_focus_change(int wnd_id, const char* app_id, const char* title)
             }
         }
         if (layout != INVALID_LAYOUT) {
-            put_layout(ctx.last_window, layout);
+            TRACE("store layout=%d, window=%d:0x%lx",
+                  layout, ctx.last_wnd, ctx.last_key);
+            put_layout(ctx.last_key, layout);
         }
     }
 
     // define layout for currently focused window
-    layout = get_layout(window);
+    layout = get_layout(key);
+    TRACE("found layout=%d, window=%d:0x%lx", layout, wnd_id, key);
     if (layout == INVALID_LAYOUT && ctx.default_layout != INVALID_LAYOUT) {
         layout = ctx.default_layout; // set default
     }
@@ -95,27 +108,41 @@ static int on_focus_change(int wnd_id, const char* app_id, const char* title)
         layout = INVALID_LAYOUT; // already set
     }
 
-    ctx.last_window = window;
+    ctx.last_key = key;
+    ctx.last_wnd = wnd_id;
 
+    TRACE("set layout=%d, window=%d:0x%lx", layout, wnd_id, key);
     return layout;
+}
+
+/** Title change handler. */
+static int on_title_change(int wnd_id, const char* app_id, const char* title)
+{
+    if (ctx.last_wnd == wnd_id) {
+        TRACE("window_id=%d", wnd_id);
+        return on_focus_change(wnd_id, app_id, title);
+    }
+    return INVALID_LAYOUT;
 }
 
 /** Window close handler. */
 static void on_window_close(int wnd_id, const char* app_id, const char* title)
 {
-    const unsigned long window = window_id(wnd_id, app_id, title);
+    const unsigned long key = window_key(wnd_id, app_id, title);
 
-    rm_layout(window);
+    TRACE("window=%d:0x%lx", wnd_id, key);
+    rm_layout(key);
 
-    if (window == ctx.last_window) {
-        // reset last window id to prevent saving layout for the closed window
-        ctx.last_window = INVALID_WINDOW;
+    if (key == ctx.last_key) {
+        // reset last window key to prevent saving layout for the closed window
+        ctx.last_key = INVALID_KEY;
     }
 }
 
 /** Keyboard layout change handler. */
 static void on_layout_change(int layout)
 {
+    TRACE("layout=%d, window=%d:0x%lx", layout, ctx.last_wnd, ctx.last_key);
     ctx.current_layout = layout;
     clock_gettime(CLOCK_MONOTONIC, &ctx.switch_timestamp);
 }
@@ -127,7 +154,7 @@ static void set_tabapps(const char* ids)
 
     // get number of app ids
     size = 1;
-    for(const char* ptr = ids; *ptr; ++ptr) {
+    for (const char* ptr = ids; *ptr; ++ptr) {
         if (*ptr == ',') {
             ++size;
         }
@@ -135,7 +162,7 @@ static void set_tabapps(const char* ids)
 
     // split into array
     ctx.tabapps = malloc(size * sizeof(char*));
-    for(const char* ptr = ids; ; ++ptr) {
+    for (const char* ptr = ids;; ++ptr) {
         if (!*ptr || *ptr == ',') {
             const size_t len = ptr - ids;
             char* id = malloc(len + 1 /* last null */);
@@ -217,5 +244,6 @@ int main(int argc, char* argv[])
         set_tabapps(DEFAULT_TABAPPS);
     }
 
-    return sway_monitor(on_focus_change, on_window_close, on_layout_change);
+    return sway_monitor(on_focus_change, on_title_change,
+                        on_window_close, on_layout_change);
 }
