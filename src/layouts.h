@@ -3,25 +3,28 @@
 
 #pragma once
 
-#define INVALID_KEY     0
+#include <stdint.h>
+
 #define INVALID_LAYOUT -1
 
 /**
  * Get layout information for specified window.
- * @param[in] key window key
+ * @param[in] window window id
+ * @param[in] tab subwindow (tab) id
  * @return layout index, INVALID_LAYOUT if not found
  */
-int get_layout(unsigned long key);
+int get_layout(uint32_t window, uint32_t tab);
 
 /**
  * Put layout information into storage.
- * @param[in] key window key
+ * @param[in] window window id
+ * @param[in] tab subwindow (tab) id
  * @param[in] layout keyboard layout index
  */
-void put_layout(unsigned long key, int layout);
+void put_layout(uint32_t window, uint32_t tab, int layout);
 
 /**
  * Remove layout information from storage.
- * @param[in] key window key
+ * @param[in] window window id
  */
-void rm_layout(unsigned long key);
+void rm_layout(uint32_t window);

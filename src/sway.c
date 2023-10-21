@@ -227,13 +227,13 @@ static void container_info(struct json_object* msg, int* wnd_id,
     if (!json_object_object_get_ex(msg, "container", &cnt_node)) {
         return;
     }
-    if (json_object_object_get_ex(cnt_node, "id", &sub_node)) {
+    if (wnd_id && json_object_object_get_ex(cnt_node, "id", &sub_node)) {
         *wnd_id = json_object_get_int(sub_node);
     }
-    if (json_object_object_get_ex(cnt_node, "app_id", &sub_node)) {
+    if (app_id && json_object_object_get_ex(cnt_node, "app_id", &sub_node)) {
         *app_id = json_object_get_string(sub_node);
     }
-    if (json_object_object_get_ex(cnt_node, "name", &sub_node)) {
+    if (title && json_object_object_get_ex(cnt_node, "name", &sub_node)) {
         *title = json_object_get_string(sub_node);
     }
 }
@@ -299,8 +299,8 @@ int sway_monitor(on_focus fn_focus, on_title fn_title,
                         ipc_change_layout(sock, layout);
                     }
                 } else if (strcmp(event_name, "close") == 0) {
-                    container_info(msg, &wnd_id, &app_id, &title);
-                    fn_close(wnd_id, app_id, title);
+                    container_info(msg, &wnd_id, NULL, NULL);
+                    fn_close(wnd_id);
                 } else if (strcmp(event_name, "xkb_layout") == 0) {
                     const int layout = layout_index(msg);
                     if (layout >= 0) {

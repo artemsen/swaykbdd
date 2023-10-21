@@ -24,10 +24,8 @@ typedef int (*on_title)(int wnd_id, const char* app_id, const char* title);
 /**
  * Callback function: Window close handler.
  * @param[in] wnd_id identifier of currently focused window (container)
- * @param[in] app_id application id
- * @param[in] title title of the window
  */
-typedef void (*on_close)(int wnd_id, const char* app_id, const char* title);
+typedef void (*on_close)(int wnd_id);
 
 /**
  * Callback function: Keyboard layout change handler.
