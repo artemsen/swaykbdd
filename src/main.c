@@ -41,32 +41,24 @@ static struct timespec switch_timestamp;
 static char** tab_apps_list;
 static size_t tab_apps_num;
 
-/**
- * Generate unique tab id for tab-enabled applications.
- * @param[in] app_id application id
- * @param[in] title title of the window
- * @return tab id or 0 if application does not support tabs
- */
-static uint32_t get_tab_id(const char* app_id, const char* title)
-{
-    for (size_t i = 0; i < tab_apps_num; ++i) {
-        if (strcmp(app_id, tab_apps_list[i]) == 0) {
-            // djb2 hash
-            uint32_t hash = 5381;
-            while (*title) {
-                hash = ((hash << 5) + hash) + *title++;
-            }
-            return hash;
-        }
-    }
-    return 0;
-}
-
 /** Focus change handler. */
 static int on_focus_change(int wnd_id, const char* app_id, const char* title)
 {
     int layout;
-    const uint32_t tab_id = get_tab_id(app_id, title);
+    uint32_t tab_id = 0;
+
+    // generate unique tab id from window title (if it is a browser)
+    for (size_t i = 0; i < tab_apps_num; ++i) {
+        if (strcmp(app_id, tab_apps_list[i]) == 0) {
+            const char* ptr = title;
+            // djb2 hash
+            tab_id = 5381;
+            while (*ptr) {
+                tab_id = ((tab_id << 5) + tab_id) + *ptr++;
+            }
+            break;
+        }
+    }
 
     // save current layout for previously focused window
     if (last_wnd && current_layout != INVALID_LAYOUT) {
@@ -137,36 +129,6 @@ static void on_layout_change(int layout)
     clock_gettime(CLOCK_MONOTONIC, &switch_timestamp);
 }
 
-/** Set list of tab-enabled app IDs from command line arument. */
-static void set_tabapps(const char* ids)
-{
-    size_t size;
-
-    // get number of app ids
-    size = 1;
-    for (const char* ptr = ids; *ptr; ++ptr) {
-        if (*ptr == ',') {
-            ++size;
-        }
-    }
-
-    // split into array
-    tab_apps_list = malloc(size * sizeof(char*));
-    for (const char* ptr = ids;; ++ptr) {
-        if (!*ptr || *ptr == ',') {
-            const size_t len = ptr - ids;
-            char* id = malloc(len + 1 /* last null */);
-            memcpy(id, ids, len);
-            id[len] = 0;
-            ids = ptr + 1;
-            tab_apps_list[tab_apps_num++] = id;
-            if (!*ptr) {
-                break;
-            }
-        }
-    }
-}
-
 /**
  * Application entry point.
  */
@@ -228,7 +190,29 @@ int main(int argc, char* argv[])
     }
 
     if (*tab_apps) {
-        set_tabapps(tab_apps);
+        size_t i = 0;
+        // create list of tab-enabled app IDs
+        tab_apps_num = 1;
+        for (const char* ptr = tab_apps; *ptr; ++ptr) {
+            if (*ptr == ',') {
+                ++tab_apps_num;
+            }
+        }
+        tab_apps_list = malloc(tab_apps_num * sizeof(char*));
+        // split into array
+        for (const char* ptr = tab_apps;; ++ptr) {
+            if (!*ptr || *ptr == ',') {
+                const size_t len = ptr - tab_apps;
+                char* app_id = malloc(len + 1 /* last null */);
+                memcpy(app_id, tab_apps, len);
+                app_id[len] = 0;
+                tab_apps_list[i++] = app_id;
+                tab_apps = ptr + 1;
+                if (!*ptr) {
+                    break;
+                }
+            }
+        }
     }
 
     return sway_monitor(on_focus_change, on_title_change,
