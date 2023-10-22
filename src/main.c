@@ -27,24 +27,19 @@
 #define TRACE(fmt, ...)
 #endif
 
-/** Static context. */
-struct context {
-    uint32_t last_wnd;                ///< Identifier of the last focused window
-    uint32_t last_tab;                ///< Identifier of the last focused tab
-    int default_layout;               ///< Default layout for new windows
-    int current_layout;               ///< Current layout index
-    size_t switch_timeout;            ///< Ignored time between layout change and focus lost
-    struct timespec switch_timestamp; ///< Timestamp of the last layout change
-    char** tabapps;                   ///< List of tab-enbled applications
-    size_t tabapps_num;               ///< Size of tabbaps list
-};
-static struct context ctx = {
-    .last_wnd = 0,
-    .last_tab = 0,
-    .default_layout = DEFAULT_LAYOUT,
-    .current_layout = INVALID_LAYOUT,
-    .switch_timeout = DEFAULT_TIMEOUT,
-};
+// Identifiers of the last focused window and its tab
+static uint32_t last_wnd;
+static uint32_t last_tab;
+// Default layout for new windows
+static int default_layout = DEFAULT_LAYOUT;
+// Currently active layout
+static int current_layout = INVALID_LAYOUT;
+// Ignored time between layout change and focus lost
+static size_t switch_timeout = DEFAULT_TIMEOUT;
+static struct timespec switch_timestamp;
+// List of tab-enbled applications
+static char** tab_apps_list;
+static size_t tab_apps_num;
 
 /**
  * Generate unique tab id for tab-enabled applications.
@@ -54,8 +49,8 @@ static struct context ctx = {
  */
 static uint32_t get_tab_id(const char* app_id, const char* title)
 {
-    for (size_t i = 0; i < ctx.tabapps_num; ++i) {
-        if (strcmp(app_id, ctx.tabapps[i]) == 0) {
+    for (size_t i = 0; i < tab_apps_num; ++i) {
+        if (strcmp(app_id, tab_apps_list[i]) == 0) {
             // djb2 hash
             uint32_t hash = 5381;
             while (*title) {
@@ -74,39 +69,39 @@ static int on_focus_change(int wnd_id, const char* app_id, const char* title)
     const uint32_t tab_id = get_tab_id(app_id, title);
 
     // save current layout for previously focused window
-    if (ctx.last_wnd && ctx.current_layout != INVALID_LAYOUT) {
-        if (ctx.switch_timeout == 0) {
-            layout = ctx.current_layout;
+    if (last_wnd && current_layout != INVALID_LAYOUT) {
+        if (switch_timeout == 0) {
+            layout = current_layout;
         } else {
             // check for timeout
             size_t elapsed;
             struct timespec ts;
             clock_gettime(CLOCK_MONOTONIC, &ts);
-            elapsed = TIMESPEC_MS(ts) - TIMESPEC_MS(ctx.switch_timestamp);
-            if (elapsed > ctx.switch_timeout) {
-                layout = ctx.current_layout;
+            elapsed = TIMESPEC_MS(ts) - TIMESPEC_MS(switch_timestamp);
+            if (elapsed > switch_timeout) {
+                layout = current_layout;
             } else {
                 layout = INVALID_LAYOUT;
             }
         }
         if (layout != INVALID_LAYOUT) {
-            TRACE("store layout=%d, window=%x:%x", layout, ctx.last_wnd, ctx.last_tab);
-            put_layout(ctx.last_wnd, ctx.last_tab, layout);
+            TRACE("store layout=%d, window=%x:%x", layout, last_wnd, last_tab);
+            put_layout(last_wnd, last_tab, layout);
         }
     }
 
     // define layout for currently focused window
     layout = get_layout(wnd_id, tab_id);
     TRACE("found layout=%d, window=%x:%x", layout, wnd_id, tab_id);
-    if (layout == INVALID_LAYOUT && ctx.default_layout != INVALID_LAYOUT) {
-        layout = ctx.default_layout; // set default
+    if (layout == INVALID_LAYOUT && default_layout != INVALID_LAYOUT) {
+        layout = default_layout; // set default
     }
-    if (layout == ctx.current_layout) {
+    if (layout == current_layout) {
         layout = INVALID_LAYOUT; // already set
     }
 
-    ctx.last_wnd = wnd_id;
-    ctx.last_tab = tab_id;
+    last_wnd = wnd_id;
+    last_tab = tab_id;
 
     TRACE("set layout=%d, window=%x:%x", layout, wnd_id, tab_id);
     return layout;
@@ -115,7 +110,7 @@ static int on_focus_change(int wnd_id, const char* app_id, const char* title)
 /** Title change handler. */
 static int on_title_change(int wnd_id, const char* app_id, const char* title)
 {
-    if (ctx.last_wnd == (uint32_t)wnd_id) {
+    if (last_wnd == (uint32_t)wnd_id) {
         TRACE("window_id=%d", wnd_id);
         return on_focus_change(wnd_id, app_id, title);
     }
@@ -128,18 +123,18 @@ static void on_window_close(int wnd_id)
     TRACE("window=%x:*", wnd_id);
     rm_layout(wnd_id);
 
-    if (ctx.last_wnd == (uint32_t)wnd_id) {
+    if (last_wnd == (uint32_t)wnd_id) {
         // reset last window id to prevent saving layout for the closed window
-        ctx.last_wnd = 0;
+        last_wnd = 0;
     }
 }
 
 /** Keyboard layout change handler. */
 static void on_layout_change(int layout)
 {
-    TRACE("layout=%d, window=%x:%x", layout, ctx.last_wnd, ctx.last_tab);
-    ctx.current_layout = layout;
-    clock_gettime(CLOCK_MONOTONIC, &ctx.switch_timestamp);
+    TRACE("layout=%d, window=%x:%x", layout, last_wnd, last_tab);
+    current_layout = layout;
+    clock_gettime(CLOCK_MONOTONIC, &switch_timestamp);
 }
 
 /** Set list of tab-enabled app IDs from command line arument. */
@@ -156,7 +151,7 @@ static void set_tabapps(const char* ids)
     }
 
     // split into array
-    ctx.tabapps = malloc(size * sizeof(char*));
+    tab_apps_list = malloc(size * sizeof(char*));
     for (const char* ptr = ids;; ++ptr) {
         if (!*ptr || *ptr == ',') {
             const size_t len = ptr - ids;
@@ -164,7 +159,7 @@ static void set_tabapps(const char* ids)
             memcpy(id, ids, len);
             id[len] = 0;
             ids = ptr + 1;
-            ctx.tabapps[ctx.tabapps_num++] = id;
+            tab_apps_list[tab_apps_num++] = id;
             if (!*ptr) {
                 break;
             }
@@ -186,6 +181,7 @@ int main(int argc, char* argv[])
         { NULL,      0,                 NULL,  0  }
     };
     const char* short_opts = "d:t:a:vh";
+    const char* tab_apps = DEFAULT_TABAPPS;
 
     opterr = 0; // prevent native error messages
 
@@ -194,17 +190,17 @@ int main(int argc, char* argv[])
     while ((opt = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
         switch (opt) {
             case 'd':
-                ctx.default_layout = atoi(optarg);
-                if (ctx.default_layout < -1 || ctx.default_layout > 0xffff) {
+                default_layout = atoi(optarg);
+                if (default_layout < -1 || default_layout > 0xffff) {
                     fprintf(stderr, "Invalid default layout: %s\n", optarg);
                     return EXIT_FAILURE;
                 }
                 break;
             case 't':
-                ctx.switch_timeout = atoi(optarg);
+                switch_timeout = atoi(optarg);
                 break;
             case 'a':
-                set_tabapps(optarg);
+                tab_apps = optarg;
                 break;
             case 'v':
                 printf("swaykbdd version " VERSION ".\n");
@@ -231,8 +227,8 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    if (ctx.tabapps_num == 0) {
-        set_tabapps(DEFAULT_TABAPPS);
+    if (*tab_apps) {
+        set_tabapps(tab_apps);
     }
 
     return sway_monitor(on_focus_change, on_title_change,
