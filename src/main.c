@@ -4,6 +4,7 @@
 #include "layouts.h"
 #include "sway.h"
 
+#include <stdbool.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,13 +21,6 @@
 // Convert timespec to milliseconds
 #define TIMESPEC_MS(ts) (ts.tv_sec * 1000 + ts.tv_nsec / 1000000)
 
-// Debug trace
-#if 0
-#define TRACE(fmt, ...) printf("%s: " fmt "\n", __func__, ##__VA_ARGS__)
-#else
-#define TRACE(fmt, ...)
-#endif
-
 // Identifiers of the last focused window and its tab
 static uint32_t last_wnd;
 static uint32_t last_tab;
@@ -40,6 +34,9 @@ static struct timespec switch_timestamp;
 // List of tab-enbled applications
 static char** tab_apps_list;
 static size_t tab_apps_num;
+// Verbose (event trace) mode
+static bool verbose = false;
+#define TRACE(fmt, ...) if (verbose) printf("%s: " fmt "\n", __func__, ##__VA_ARGS__)
 
 /** Focus change handler. */
 static int on_focus_change(int wnd_id, const char* app_id, const char* title)
@@ -138,11 +135,12 @@ int main(int argc, char* argv[])
         { "default", required_argument, NULL, 'd' },
         { "timeout", required_argument, NULL, 't' },
         { "tabapps", required_argument, NULL, 'a' },
+        { "verbose", no_argument,       NULL, 'V' },
         { "version", no_argument,       NULL, 'v' },
         { "help",    no_argument,       NULL, 'h' },
         { NULL,      0,                 NULL,  0  }
     };
-    const char* short_opts = "d:t:a:vh";
+    const char* short_opts = "d:t:a:Vvh";
     const char* tab_apps = DEFAULT_TABAPPS;
 
     opterr = 0; // prevent native error messages
@@ -164,6 +162,9 @@ int main(int argc, char* argv[])
             case 'a':
                 tab_apps = optarg;
                 break;
+            case 'V':
+                verbose = true;
+                break;
             case 'v':
                 printf("swaykbdd version " VERSION ".\n");
                 return EXIT_SUCCESS;
@@ -176,6 +177,7 @@ int main(int argc, char* argv[])
                        "saving layout [%i ms]\n", DEFAULT_TIMEOUT);
                 printf("  -a, --tabapps=IDS List of tab-enabled app IDs "
                        "[" DEFAULT_TABAPPS "]\n");
+                printf("  -V, --verbose     Enable verbose output (event trace)\n");
                 printf("  -v, --version     Print version info and exit\n");
                 printf("  -h, --help        Print this help and exit\n");
                 return EXIT_SUCCESS;
