@@ -3,7 +3,7 @@
 ![CI](https://github.com/artemsen/swaykbdd/workflows/CI/badge.svg)
 
 The _swaykbdd_ utility can be used to automatically change the keyboard layout
-on a per-window basis.
+on a per-window or per-tab basis.
 
 ## Usage
 
