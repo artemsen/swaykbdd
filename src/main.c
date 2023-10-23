@@ -45,15 +45,17 @@ static int on_focus_change(int wnd_id, const char* app_id, const char* title)
     uint32_t tab_id = 0;
 
     // generate unique tab id from window title (if it is a browser)
-    for (size_t i = 0; i < tab_apps_num; ++i) {
-        if (strcmp(app_id, tab_apps_list[i]) == 0) {
-            const char* ptr = title;
-            // djb2 hash
-            tab_id = 5381;
-            while (*ptr) {
-                tab_id = ((tab_id << 5) + tab_id) + *ptr++;
+    if (app_id && title) {
+        for (size_t i = 0; i < tab_apps_num; ++i) {
+            if (strcmp(app_id, tab_apps_list[i]) == 0) {
+                const char* ptr = title;
+                // djb2 hash
+                tab_id = 5381;
+                while (*ptr) {
+                    tab_id = ((tab_id << 5) + tab_id) + *ptr++;
+                }
+                break;
             }
-            break;
         }
     }
 

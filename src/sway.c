@@ -283,8 +283,8 @@ int sway_monitor(on_focus fn_focus, on_title fn_title,
             struct json_object* event_node;
             if (json_object_object_get_ex(msg, "change", &event_node)) {
                 int wnd_id = -1;
-                const char* app_id = "";
-                const char* title = "";
+                const char* app_id = NULL;
+                const char* title = NULL;
                 const char* event_name = json_object_get_string(event_node);
                 if (strcmp(event_name, "focus") == 0) {
                     container_info(msg, &wnd_id, &app_id, &title);
