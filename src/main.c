@@ -109,7 +109,7 @@ static int on_title_change(int wnd_id, const char* app_id, const char* title)
 }
 
 /** Window close handler. */
-static void on_window_close(int wnd_id)
+static int on_window_close(int wnd_id)
 {
     TRACE("window=%x:*", wnd_id);
     rm_layout(wnd_id);
@@ -118,6 +118,8 @@ static void on_window_close(int wnd_id)
         // reset last window id to prevent saving layout for the closed window
         last_wnd = 0;
     }
+
+    return default_layout;
 }
 
 /** Keyboard layout change handler. */
@@ -153,7 +155,7 @@ int main(int argc, char* argv[])
         switch (opt) {
             case 'd':
                 default_layout = atoi(optarg);
-                if (default_layout < -1 || default_layout > 0xffff) {
+                if (default_layout < 0 || default_layout > 0xffff) {
                     fprintf(stderr, "Invalid default layout: %s\n", optarg);
                     return EXIT_FAILURE;
                 }

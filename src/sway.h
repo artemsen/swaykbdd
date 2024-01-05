@@ -24,8 +24,9 @@ typedef int (*on_title)(int wnd_id, const char* app_id, const char* title);
 /**
  * Callback function: Window close handler.
  * @param[in] wnd_id identifier of currently focused window (container)
+ * @return keyboard layout to set, -1 to leave the current one
  */
-typedef void (*on_close)(int wnd_id);
+typedef int (*on_close)(int wnd_id);
 
 /**
  * Callback function: Keyboard layout change handler.

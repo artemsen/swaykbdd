@@ -283,29 +283,28 @@ int sway_monitor(on_focus fn_focus, on_title fn_title,
             struct json_object* event_node;
             if (json_object_object_get_ex(msg, "change", &event_node)) {
                 int wnd_id = -1;
+                int layout = -1;
                 const char* app_id = NULL;
                 const char* title = NULL;
                 const char* event_name = json_object_get_string(event_node);
                 if (strcmp(event_name, "focus") == 0) {
                     container_info(msg, &wnd_id, &app_id, &title);
-                    const int layout = fn_focus(wnd_id, app_id, title);
-                    if (layout >= 0) {
-                        ipc_change_layout(sock, layout);
-                    }
+                    layout = fn_focus(wnd_id, app_id, title);
                 } else if (strcmp(event_name, "title") == 0) {
                     container_info(msg, &wnd_id, &app_id, &title);
-                    const int layout = fn_title(wnd_id, app_id, title);
-                    if (layout >= 0) {
-                        ipc_change_layout(sock, layout);
-                    }
+                    layout = fn_title(wnd_id, app_id, title);
                 } else if (strcmp(event_name, "close") == 0) {
                     container_info(msg, &wnd_id, NULL, NULL);
-                    fn_close(wnd_id);
+                    layout = fn_close(wnd_id);
                 } else if (strcmp(event_name, "xkb_layout") == 0) {
-                    const int layout = layout_index(msg);
+                    layout = layout_index(msg);
                     if (layout >= 0) {
                         fn_layout(layout);
                     }
+                    layout = -1;
+                }
+                if (layout >= 0) {
+                    ipc_change_layout(sock, layout);
                 }
             }
             json_object_put(msg);
